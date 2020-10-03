@@ -1,9 +1,11 @@
 #include <stdio.h>
+
 #include <uchar.h>
-#include <wchar.h>
+#include <stdint.h>
 
 #define pnk_lengthof(x) (sizeof x / sizeof *x)
-#define pnk_range(x) ((struct Range){ x, x + pnk_lengthof(x) - 1})                                                                       \
+#define pnk_range(x) ((struct Range){ x, x + pnk_lengthof(x) - 1})
+#define pnk_to_range(b, e) ((struct Range){ b, e })
 
 #define pnk_range_foreach(T, it, element, range)                             \
     for (T const* it = range.cbegin; it != range.cend; ++it) {               \
@@ -17,75 +19,54 @@ struct Range {
     };
 };
 
-static char32_t const*
-pnk_bf_while(struct Range const r, /* out */unsigned char** const pointer_ref)
+static void const*
+pnk_bf_interpret(struct Range const program,
+                 uint8_t**    const tape_iterator /* out */)
 {
-    char32_t const* loop_end = r.cbegin;
+    void const* end_of_program = program.cbegin;
 
-    while (**pointer_ref != 0)
-    {
-        pnk_range_foreach(char32_t, it, current, r)
-        {
-            switch (current)
-            {
-                case '+': **pointer_ref += 1; break;
-                case '-': **pointer_ref -= 1; break;
-                case '>': *pointer_ref  += 1; break;
-                case '<': *pointer_ref  -= 1; break;
-                case '[':
-                    it = pnk_bf_while(
-                        (struct Range){ it + 1, r.cend },
-                        pointer_ref
-                    );
-                    break;
-                case ']':
-                    loop_end = it;
-                    goto leave_foreach;
-                case '.': putchar(**pointer_ref);       break;
-                case ',': **pointer_ref = fgetc(stdin); break;
-            }
-        }
-        pnk_endforeach
-
-        leave_foreach: ;
-    }
-
-    return loop_end;
-}
-
-static unsigned char
-pnk_bf_interpret(struct Range r)
-{
-    static unsigned char program_tape[30000] = {};
-    unsigned char* pointer = program_tape;
-
-    pnk_range_foreach(char32_t, it, current, r)
+    pnk_range_foreach(char32_t, iter, current, program)
     {
         switch (current)
         {
-            case '+': *pointer += 1; break;
-            case '-': *pointer -= 1; break;
-            case '>': pointer += 1;  break;
-            case '<': pointer -= 1;  break;
-            case '[':
-                it = pnk_bf_while(
-                    (struct Range){ it + 1, r.cend },
-                    &pointer
-                );
-                break;
-            case '.': putchar(*pointer);       break;
-            case ',': *pointer = fgetc(stdin); break;
-        }
-    }
-    pnk_endforeach
+            case '+': **tape_iterator += 1; break;
+            case '-': **tape_iterator -= 1; break;
+            case '>': *tape_iterator  += 1; break;
+            case '<': *tape_iterator  -= 1; break;
 
-    return *pointer;
+            case '[':
+                void const* end_of_loop = iter;
+
+                while (**tape_iterator != 0)
+                {
+                    end_of_loop = pnk_bf_interpret(
+                        pnk_to_range(iter + 1, program.cend),
+                        tape_iterator
+                    );
+                }
+
+                iter = end_of_loop;
+                break;
+
+            case ']':
+                end_of_program = iter;
+                goto leave_foreach;
+
+            case '.': putchar(**tape_iterator);       break;
+            case ',': **tape_iterator = fgetc(stdin); break;
+        }
+    } pnk_endforeach
+
+    leave_foreach:
+        return end_of_program;
 }
 
 int main(int argc, char** argv)
 {
+    uint8_t tape[30000] = {};
+    uint8_t* tape_iterator = tape;
     char32_t const program[] = U"++++++++[>++++[>++>+++>+++>+<<<<-]>+>+>->>+[<]<-]>>.>---.+++++++..+++.>>.<-.<.+++.------.--------.>>+.>++.";
-    int result = pnk_bf_interpret(pnk_range(program));
+    pnk_bf_interpret(pnk_range(program), &tape_iterator);
     return 0;
 }
 
