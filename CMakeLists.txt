@@ -1,6 +1,11 @@
 CMAKE_MINIMUM_REQUIRED(VERSION 3.5)
 PROJECT(pnk-bf-toolkit VERSION 1.0)
 
-ADD_EXECUTABLE(test tests/test.c)
+SET(LIBRARY-SRC
+	inc/pnk/bf_toolkit.h
+	src/bf_toolkit.c
+)
+
+ADD_EXECUTABLE(test tests/test.c ${LIBRARY-SRC})
 TARGET_INCLUDE_DIRECTORIES(test PRIVATE inc)
 TARGET_COMPILE_FEATURES   (test PRIVATE c_std_11)
