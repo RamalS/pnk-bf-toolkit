@@ -2,8 +2,8 @@
 
 #include <pnk/bf_toolkit.h>
 
-void const* pnk_bf_interpret(char            const program[const static 8],
-                             unsigned char** const tape_iterator)
+void const* pnk_bf_interpret(char const*     const program,
+                             char unsigned** const tape_iterator)
 {
     void const* end_of_program = program;
 
@@ -21,7 +21,9 @@ void const* pnk_bf_interpret(char            const program[const static 8],
                     end_of_loop = pnk_bf_interpret(it + 1, tape_iterator);
                 it = end_of_loop;
                 break;
-            case ']': end_of_program = it; goto leave;
+            case ']':
+                end_of_program = it;
+                goto leave;
             case '.': putchar(**tape_iterator);       break;
             case ',': **tape_iterator = fgetc(stdin); break;
         }
